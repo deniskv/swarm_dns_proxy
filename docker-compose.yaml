@@ -1,0 +1,45 @@
+# Deploy with:  docker stack deploy -c docker-compose.yaml dns-proxy
+
+version: "3.8"
+
+services:
+  swarm-dns-proxy:
+    image: swarm-dns-proxy:latest
+    build: .
+    # Run on manager nodes — they have full Swarm API access.
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount your config (or bake it into the image):
+      # - ./config.yaml:/etc/swarm-dns-proxy/config.yaml:ro
+    ports:
+      - target: 53
+        published: 5353        # change to 53 if this is the primary resolver
+        protocol: udp
+        mode: host             # avoid VIP indirection for DNS itself
+      - target: 8053
+        published: 8053
+        protocol: tcp
+        mode: host
+    environment:
+      DNS_TEMPLATE: "{node}.replica-{replica}.{service}.swarm.local"
+      DNS_TTL: "30"
+      POLL_INTERVAL: "5"
+      UPSTREAM_DNS: "8.8.8.8"
+      LOG_LEVEL: "INFO"
+      # HTTP_PORT: "8053"
+    networks:
+      - proxy-internal
+
+networks:
+  proxy-internal:
+    driver: overlay
+    attachable: true

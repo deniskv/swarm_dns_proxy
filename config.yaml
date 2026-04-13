@@ -1,0 +1,57 @@
+# =============================================================================
+# Swarm DNS Proxy — configuration
+# =============================================================================
+#
+# Template variables:
+#   {node}      — Swarm node hostname
+#   {service}   — service name
+#   {stack}     — stack namespace (label com.docker.stack.namespace, or "default")
+#   {slot}      — task slot (1, 2, 3 …)
+#   {replica}   — zero-padded slot (001, 002, 003 …)
+#   {task_id}   — short task ID (12 chars)
+#   {network}   — overlay network name
+#
+# All generated FQDNs are lowercased automatically.
+# =============================================================================
+
+# Global FQDN template applied to all services unless overridden.
+template: "{node}.replica-{replica}.{service}.swarm.local"
+
+# UDP port for the built-in DNS server.
+dns_port: 53
+
+# TTL (seconds) returned in DNS responses.
+ttl: 30
+
+# How often to poll the Docker API (seconds).
+poll_interval: 5
+
+# Docker socket path.
+docker_socket: "/var/run/docker.sock"
+
+# Upstream DNS for queries that don't match any Swarm record.
+upstream_dns: "8.8.8.8"
+upstream_port: 53
+
+# Optional suffix appended to every FQDN (rarely needed).
+# domain_suffix: ""
+
+# Log level: DEBUG, INFO, WARNING, ERROR.
+log_level: "INFO"
+
+# ---------------------------------------------------------------------------
+# Per-service overrides (optional).
+# If this list is non-empty only the listed services are tracked.
+# ---------------------------------------------------------------------------
+# services:
+#   - name: nginx
+#     # Override template just for this service:
+#     template: "{node}.{replica}.nginx.internal"
+#     # Limit to specific overlay networks (skip ingress, etc.):
+#     networks:
+#       - my-overlay
+#
+#   - name: api
+#     template: "{node}.{replica}.api.prod"
+#     networks:
+#       - backend
