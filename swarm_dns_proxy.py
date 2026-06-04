@@ -158,7 +158,7 @@ class SwarmWatcher:
             if resp.status != 200:
                 text = await resp.text()
                 logger.error("Docker API %s -> %d: %s", path, resp.status, text[:200])
-                return None
+                resp.raise_for_status()
             return await resp.json()
 
     async def collect_records(self) -> list[ReplicaRecord]:
