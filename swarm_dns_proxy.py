@@ -458,17 +458,44 @@ class DnsServer:
 
         qname_lower = qname.rstrip(".").lower()
 
-        if qtype == DNS_TYPE_A and qclass == DNS_CLASS_IN:
-            async with self._lock:
-                ips = self._records.get(qname_lower)
+        # Determine if query is in our managed zone
+        suffix = self.config.domain_suffix.strip(".").lower()
+        if not suffix:
+            last_brace = self.config.template.rfind("}")
+            if last_brace != -1:
+                suffix = self.config.template[last_brace + 1:].strip(".").lower()
 
-            if ips is not None:
+        is_local_zone = False
+        if suffix and (qname_lower == suffix or qname_lower.endswith("." + suffix)):
+            is_local_zone = True
+
+        async with self._lock:
+            exists = qname_lower in self._records
+
+        if exists:
+            if qtype == DNS_TYPE_A and qclass == DNS_CLASS_IN:
+                async with self._lock:
+                    ips = self._records[qname_lower]
                 answers = [(qname, ip, self.config.ttl) for ip in ips]
-                response = build_dns_response(data, answers)
+                response = build_dns_response(data, answers, rcode=DNS_RCODE_OK)
                 logger.debug("Resolved %s -> %s", qname, ips)
                 if self._transport:
                     self._transport.sendto(response, addr)
                 return
+            else:
+                # Return empty NOERROR response for other query types of managed records
+                response = build_dns_response(data, [], rcode=DNS_RCODE_OK)
+                logger.debug("Local match for %s, but unsupported type/class (%d/%d). Returning empty NOERROR.", qname, qtype, qclass)
+                if self._transport:
+                    self._transport.sendto(response, addr)
+                return
+        elif is_local_zone:
+            # Local zone match but record doesn't exist -> return local NXDOMAIN
+            response = build_dns_response(data, [], rcode=DNS_RCODE_NXDOMAIN)
+            logger.debug("NXDOMAIN for local zone query %s", qname)
+            if self._transport:
+                self._transport.sendto(response, addr)
+            return
 
         # Forward to upstream
         await self._forward_upstream(data, addr)
