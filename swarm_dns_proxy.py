@@ -330,11 +330,15 @@ def encode_dns_name(name: str) -> bytes:
 def decode_dns_name(data: bytes, offset: int) -> tuple[str, int]:
     labels = []
     jumped = False
-    original_offset = offset
     max_offset = offset
+    visited = set()
+    jumps = 0
     while True:
         if offset >= len(data):
             break
+        if offset in visited or jumps > 10:
+            raise ValueError("Malformed packet: compression loop or excessive pointer jumps")
+        visited.add(offset)
         length = data[offset]
         if length == 0:
             offset += 1
@@ -347,6 +351,7 @@ def decode_dns_name(data: bytes, offset: int) -> tuple[str, int]:
             pointer = struct.unpack("!H", data[offset:offset + 2])[0] & 0x3FFF
             offset = pointer
             jumped = True
+            jumps += 1
             continue
         offset += 1
         labels.append(data[offset:offset + length].decode("ascii", errors="replace"))
