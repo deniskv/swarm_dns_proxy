@@ -370,8 +370,9 @@ def build_dns_response(
     if len(query) < 12:
         return b""
     txn_id = query[:2]
-    flags = struct.pack("!H", 0x8000 | (rcode & 0xF))  # QR=1, Opcode=0, AA=1
-    flags = struct.pack("!H", 0x8400 | (rcode & 0xF))  # QR=1, AA=1, RA=0
+    query_flags = struct.unpack("!H", query[2:4])[0]
+    rd_flag = query_flags & 0x0100  # Extract Recursion Desired (RD) bit
+    flags = struct.pack("!H", 0x8400 | rd_flag | (rcode & 0xF))  # QR=1, AA=1, preserve RD, set RCODE
     qd_count = struct.unpack("!H", query[4:6])[0]
     an_count = struct.pack("!H", len(answers))
     ns_count = struct.pack("!H", 0)
