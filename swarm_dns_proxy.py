@@ -163,10 +163,16 @@ class SwarmWatcher:
 
     async def collect_records(self) -> list[ReplicaRecord]:
         """Main collection: services → tasks → nodes → network attachments."""
-        services = await self._get("/services") or []
-        tasks = await self._get("/tasks?filters=" + json.dumps({"desired-state": ["running"]})) or []
-        nodes_raw = await self._get("/nodes") or []
-        networks_raw = await self._get("/networks") or []
+        services, tasks, nodes_raw, networks_raw = await asyncio.gather(
+            self._get("/services"),
+            self._get("/tasks?filters=" + json.dumps({"desired-state": ["running"]})),
+            self._get("/nodes"),
+            self._get("/networks"),
+        )
+        services = services or []
+        tasks = tasks or []
+        nodes_raw = nodes_raw or []
+        networks_raw = networks_raw or []
 
         node_map: dict[str, str] = {}  # node_id -> hostname
         for n in nodes_raw:
