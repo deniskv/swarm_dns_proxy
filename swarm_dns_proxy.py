@@ -531,12 +531,21 @@ class DnsServer:
                 response = await asyncio.wait_for(fut, timeout=5.0)
                 if self._transport:
                     self._transport.sendto(response, client_addr)
-            except asyncio.TimeoutError:
-                logger.warning("Upstream DNS timeout for query from %s", client_addr)
             finally:
                 transport.close()
+        except asyncio.TimeoutError:
+            logger.warning("Upstream DNS timeout for query from %s", client_addr)
+            if self._transport:
+                fail_resp = build_dns_response(data, [], rcode=DNS_RCODE_SERVFAIL)
+                self._transport.sendto(fail_resp, client_addr)
         except Exception as e:
             logger.error("Upstream forward error: %s", e)
+            if self._transport:
+                try:
+                    fail_resp = build_dns_response(data, [], rcode=DNS_RCODE_SERVFAIL)
+                    self._transport.sendto(fail_resp, client_addr)
+                except Exception:
+                    pass
 
 
 # ---------------------------------------------------------------------------
