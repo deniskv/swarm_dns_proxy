@@ -425,6 +425,7 @@ class DnsServer:
         self.config = config
         self._records: dict[str, list[str]] = {}  # fqdn -> [ip, ...]
         self._transport: asyncio.DatagramTransport | None = None
+        self._semaphore: asyncio.Semaphore | None = None
 
     async def update_records(self, replicas: list[ReplicaRecord]):
         new_records: dict[str, list[str]] = {}
@@ -443,8 +444,14 @@ class DnsServer:
     def get_snapshot(self) -> dict[str, list[str]]:
         return dict(self._records)
 
+    async def _handle_query_bounded(self, data: bytes, addr: tuple):
+        assert self._semaphore is not None
+        async with self._semaphore:
+            await self._handle_query(data, addr)
+
     async def start(self):
         loop = asyncio.get_running_loop()
+        self._semaphore = asyncio.Semaphore(1000)
 
         class _Protocol(asyncio.DatagramProtocol):
             def __init__(self, server: DnsServer):
@@ -454,7 +461,9 @@ class DnsServer:
                 self.server._transport = transport
 
             def datagram_received(self, data, addr):
-                asyncio.ensure_future(self.server._handle_query(data, addr))
+                if self.server._semaphore.locked():
+                    return
+                asyncio.create_task(self.server._handle_query_bounded(data, addr))
 
         transport, _ = await loop.create_datagram_endpoint(
             lambda: _Protocol(self),
