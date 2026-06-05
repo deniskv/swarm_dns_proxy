@@ -292,15 +292,27 @@ class SwarmWatcher:
         slot: int, task_id: str, network: str,
     ) -> str:
         replica = str(slot).zfill(3)
-        fqdn = tmpl.format(
-            node=node,
-            service=service,
-            stack=stack,
-            slot=slot,
-            task_id=task_id,
-            replica=replica,
-            network=network,
-        )
+        try:
+            fqdn = tmpl.format(
+                node=node,
+                service=service,
+                stack=stack,
+                slot=slot,
+                task_id=task_id,
+                replica=replica,
+                network=network,
+            )
+        except (KeyError, ValueError) as e:
+            logger.error("Invalid DNS template %r (%s). Falling back to default template.", tmpl, e)
+            fqdn = DEFAULT_TEMPLATE.format(
+                node=node,
+                service=service,
+                stack=stack,
+                slot=slot,
+                task_id=task_id,
+                replica=replica,
+                network=network,
+            )
         if self.config.domain_suffix and not fqdn.endswith(self.config.domain_suffix):
             fqdn = fqdn.rstrip(".") + "." + self.config.domain_suffix.lstrip(".")
         return fqdn.lower()
