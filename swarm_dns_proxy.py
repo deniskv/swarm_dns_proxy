@@ -424,7 +424,6 @@ class DnsServer:
     def __init__(self, config: Config):
         self.config = config
         self._records: dict[str, list[str]] = {}  # fqdn -> [ip, ...]
-        self._lock = asyncio.Lock()
         self._transport: asyncio.DatagramTransport | None = None
 
     async def update_records(self, replicas: list[ReplicaRecord]):
@@ -432,15 +431,14 @@ class DnsServer:
         for r in replicas:
             key = r.fqdn.rstrip(".").lower()
             new_records.setdefault(key, []).append(r.ip)
-        async with self._lock:
-            if new_records != self._records:
-                added = set(new_records) - set(self._records)
-                removed = set(self._records) - set(new_records)
-                if added:
-                    logger.info("DNS records added: %s", ", ".join(sorted(added)))
-                if removed:
-                    logger.info("DNS records removed: %s", ", ".join(sorted(removed)))
-                self._records = new_records
+        if new_records != self._records:
+            added = set(new_records) - set(self._records)
+            removed = set(self._records) - set(new_records)
+            if added:
+                logger.info("DNS records added: %s", ", ".join(sorted(added)))
+            if removed:
+                logger.info("DNS records removed: %s", ", ".join(sorted(removed)))
+            self._records = new_records
 
     def get_snapshot(self) -> dict[str, list[str]]:
         return dict(self._records)
@@ -488,13 +486,11 @@ class DnsServer:
         if suffix and (qname_lower == suffix or qname_lower.endswith("." + suffix)):
             is_local_zone = True
 
-        async with self._lock:
-            exists = qname_lower in self._records
+        exists = qname_lower in self._records
 
         if exists:
             if qtype == DNS_TYPE_A and qclass == DNS_CLASS_IN:
-                async with self._lock:
-                    ips = self._records[qname_lower]
+                ips = self._records[qname_lower]
                 answers = [(qname, ip, self.config.ttl) for ip in ips]
                 response = build_dns_response(data, answers, rcode=DNS_RCODE_OK)
                 logger.debug("Resolved %s -> %s", qname, ips)
