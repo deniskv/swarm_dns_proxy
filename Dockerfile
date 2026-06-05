@@ -3,7 +3,7 @@ FROM python:3.12-slim
 LABEL maintainer="swarm-dns-proxy"
 LABEL description="Dynamic DNS for Docker Swarm service replicas"
 
-RUN pip install --no-cache-dir aiohttp pyyaml
+RUN pip install --no-cache-dir aiohttp==3.9.5 PyYAML==6.0.1
 
 WORKDIR /app
 COPY swarm_dns_proxy.py .

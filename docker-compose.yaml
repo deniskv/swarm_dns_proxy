@@ -36,6 +36,11 @@ services:
       UPSTREAM_DNS: "8.8.8.8"
       LOG_LEVEL: "INFO"
       # HTTP_PORT: "8053"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     networks:
       - proxy-internal
 
