@@ -39,6 +39,12 @@ curl http://<manager-ip>:8053/records
 
 ---
 
+## Example Stack
+
+You can find a complete working example inside the [example](./example) directory. It contains a simple Hello World setup (using a sticky hello application and Nginx ingress) which demonstrates how to configure Nginx dynamic upstreams with a custom DNS resolver. You can use it as a template or reference analogy for your own microservices.
+
+---
+
 ## FQDN Template
 
 Template variables:
@@ -57,20 +63,20 @@ Template variables:
 
 ```yaml
 # Standard — node + replica + service
-template: "{node}.replica-{replica}.{service}.swarm.local"
-# → worker-1.replica-001.nginx.swarm.local
+template: "{node}.replica-{replica}.{service}.swarm"
+# → worker-1.replica-001.nginx.swarm
 
 # With stack
 template: "{replica}.{service}.{stack}.internal"
 # → 001.api.myapp.internal
 
 # With network (useful with multiple overlays)
-template: "{node}.{service}.{network}.dc.local"
+template: "{node}.{service}.{network}.dc"
 # → worker-2.redis.backend.dc.local
 
 # By task ID (guaranteed unique)
-template: "{task_id}.{service}.swarm.local"
-# → a1b2c3d4e5f6.nginx.swarm.local
+template: "{task_id}.{service}.swarm"
+# → a1b2c3d4e5f6.nginx.swarm
 ```
 
 ---
@@ -156,8 +162,8 @@ Example `/records` response:
 ```json
 {
   "records": [
-    {"fqdn": "worker-1.replica-001.nginx.swarm.local", "ip": "10.0.1.5"},
-    {"fqdn": "worker-2.replica-002.nginx.swarm.local", "ip": "10.0.1.6"}
+    {"fqdn": "worker-1.replica-001.nginx.swarm", "ip": "10.0.1.5"},
+    {"fqdn": "worker-2.replica-002.nginx.swarm", "ip": "10.0.1.6"}
   ],
   "count": 2
 }

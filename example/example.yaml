@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  nginx-ingress:
+    image: nginx:1.27-alpine
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+    configs:
+        - source: nginx_conf
+          target: /etc/nginx/nginx.conf
+        - source: test_balancer_conf
+          target: /etc/nginx/conf.d/app.conf
+    networks:
+        - ingress-network
+        - swarm-proxy_proxy-internal
+    deploy:
+        mode: global
+
+  test-balancer:
+    image: hello-sticky:0.1.1
+    deploy:
+      mode: global
+      endpoint_mode: dnsrr
+    environment:
+      - APP=test-balancer
+      - NODE_ID={{.Node.Hostname}}
+      - NODE_HOSTNAME={{.Node.Hostname}}
+      - SERVICE_NAME=test-balancer.{{.Node.Hostname}}
+    networks:
+      - ingress-network
+
+networks:
+  ingress-network:
+    external: true
+  swarm-proxy_proxy-internal:
+    external: true
+configs:
+  nginx_conf:
+    file: ./nginx/nginx.conf
+  test_balancer_conf:
+    file: ./nginx/app.conf

@@ -4,7 +4,7 @@ version: "3.8"
 
 services:
   swarm-dns-proxy:
-    image: swarm-dns-proxy:latest
+    image: swarm-dns-proxy:1.0.0
     build: .
     # Run on manager nodes — they have full Swarm API access.
     deploy:
@@ -30,7 +30,7 @@ services:
         protocol: tcp
         mode: host
     environment:
-      DNS_TEMPLATE: "{node}.replica-{replica}.{service}.swarm.local"
+      DNS_TEMPLATE: "{node}.replica-{replica}.{service}.swarm"
       DNS_TTL: "30"
       POLL_INTERVAL: "5"
       UPSTREAM_DNS: "127.0.0.11"
