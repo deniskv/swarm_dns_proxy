@@ -33,7 +33,7 @@ services:
       DNS_TEMPLATE: "{node}.replica-{replica}.{service}.swarm.local"
       DNS_TTL: "30"
       POLL_INTERVAL: "5"
-      UPSTREAM_DNS: "8.8.8.8"
+      UPSTREAM_DNS: "127.0.0.11"
       LOG_LEVEL: "INFO"
       # HTTP_PORT: "8053"
     healthcheck:
